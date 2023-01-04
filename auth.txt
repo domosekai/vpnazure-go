@@ -1,0 +1,15 @@
+// This file contains VPN Azure client (i.e. VPN server) authentication information.
+
+// Format: hostname | suffix | method | secret
+// Fields must be separated by a single TAB.
+
+// Supported authentication method: none, cert, password
+
+// Enter hostnames without suffixes in this file.
+// The list is matched from the top. Wildcards (*) are allowed.
+
+// Lines start with / or # are ignored.
+
+// Sample:
+//vpn1234	.myazure.net	cert	path to cert			// This line matches vpn1234.myazure.net
+//vpn*	.myazure.net	password	somepassword			// This line matches any vpn*.myazure.net

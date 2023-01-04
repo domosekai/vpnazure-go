@@ -29,7 +29,7 @@ var (
 func main() {
 	flag.Parse()
 	if flag.NArg() > 0 || len(os.Args) == 1 {
-		fmt.Fprintf(os.Stderr, "vpnazure-go %s (build %s) usage:\n", version, build)
+		fmt.Fprintf(os.Stderr, "vpnazure-go version %s (build %s) usage:\n", version, build)
 		flag.PrintDefaults()
 		os.Exit(1)
 	}

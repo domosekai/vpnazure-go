@@ -1,0 +1,11 @@
+// This file contains VPN Azure suffix and server information.
+
+// Format: DNS suffix | server address | certificate chain file | private key file
+// Fields must be separated by a single TAB.
+
+// Wildcards (*) are NOT allowed.
+
+// Lines start with / or # are ignored.
+
+//.myazure.net	cloud.myazure.net	fullchain.pem	privkey.pem			// This line defines suffix ".myazure.net". Its control server is at cloud.myazure.net.
+//.yourazure.net	cloud.myazure.net	fullchain.pem	privkey.pem		// This line defines suffix ".yourazure.net". It has the same control server as ".myazure.net".
