@@ -50,6 +50,12 @@ Privately hosted VPN Azure solution for SoftEther VPN
   
 ## Sample Setup
 
+  ```
+                Connect to vpn123.myazure.net                Connect to cloud.myazure.net
+    VPN Client ------------------------------> vpnazure-go <---------------------------- VPN Server
+                                                             Azure hostname: vpn123.myazure.net
+                                                             Password:  somepassword
+  ```
   Let's suppose you own `.myazure.net` and have decided to host VPN Azure service on it.
   Azure clients (i.e. VPN servers) will use hostnames in the form `vpn*.myazure.net`.
   The control server will be `cloud.myazure.net`.
@@ -78,9 +84,9 @@ Privately hosted VPN Azure solution for SoftEther VPN
   ./vpnazure-go -b 0.0.0.0:443 -auth auth.txt -suffix suffix.txt
   ```
   
-  Complete setup the custom Azure service on one SoftEther VPN server with these information:
+  Setup the custom Azure service on a SoftEther VPN server with these information:
   
-  - Server address: `cloud.myazure.net`
+  - Server address: `cloud.myazure.net:443`
   - Hostname: `vpn123.myazure.net`
   - Password: `somepassword`
   
