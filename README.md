@@ -8,7 +8,7 @@ Privately hosted VPN Azure solution for SoftEther VPN
   
   This is a open-sourced implementation of the VPN Azure function in Go.
   
-  It's NOT an official product by SoftEther Corporation.
+  It's NOT an official product of SoftEther Corporation.
   
 ## Feature
 
@@ -32,7 +32,7 @@ Privately hosted VPN Azure solution for SoftEther VPN
     
   - Security
   
-    All control and data connections speak standard TLS.
+    All control and data sessions speak standard TLS.
     
 ## Usage
 
@@ -48,6 +48,44 @@ Privately hosted VPN Azure solution for SoftEther VPN
         File that contains DNS suffixes of the service
   ```
   
+## Sample Setup
+
+  Let's suppose you own `.myazure.net` and have decided to host VPN Azure service on it.
+  Azure clients (i.e. VPN servers) will use hostnames in the form `vpn*.myazure.net`.
+  The control server will be `cloud.myazure.net`.
+  
+  First, setup wildcard DNS record to resolve `*.myazure.net` to the actual server address.
+  
+  Compile `vpnazure-go` on the server and create the following configuration files.
+  Let's say `fullchain.pem` and `privkey.pem` contain the server certificate and its key.
+  
+  *suffix.txt*
+  ```
+  // Format: DNS suffix | server address | certificate chain file | private key file
+  // Fields must be separated by a single TAB.
+  .myazure.net	cloud.myazure.net	fullchain.pem	privkey.pem
+  ```
+  
+  *auth.txt*
+  ```
+  // Format: hostname | suffix | method | secret
+  // Fields must be separated by a single TAB.
+  vpn*	.myazure.net	password	somepassword
+  ```
+  
+  Start the Azure server:
+  ```
+  ./vpnazure-go -b 0.0.0.0:443 -auth auth.txt -suffix suffix.txt
+  ```
+  
+  Complete setup the custom Azure service on one SoftEther VPN server with these information:
+  
+  - Server address: `cloud.myazure.net`
+  - Hostname: `vpn123.myazure.net`
+  - Password: `somepassword`
+  
+  Clients can connect to the server by using `vpn123.myazure.net`.
+    
 ## License
 
   Released under Apache License 2.0, the same as SoftEther VPN.
