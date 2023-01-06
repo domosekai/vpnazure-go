@@ -30,34 +30,34 @@ type serverCommand struct {
 
 // Handle new server connection
 func handleServer(num uint64, conn *tls.Conn, suffix *suffix) {
-	lg.Printf("  %5d: New server connection from %s", num, conn.RemoteAddr())
+	lg.PrintSessionf("New server connection from %s", num, ' ', 0, conn.RemoteAddr())
 	b := make([]byte, 24)
 	n, err := io.ReadAtLeast(conn, b, 4)
 	if err != nil {
-		lg.Printf("  %5d: Invalid server connection", num)
+		lg.PrintSessionf("Invalid server connection", num, ' ', 0)
 		return
 	}
 
 	if bytes.Equal(b[:4], []byte("ACTL")) {
-		lg.Printf("L %5d: Starting server control session from %s for suffix %s", num, conn.RemoteAddr(), suffix.suffix)
+		lg.PrintSessionf("Starting server control session from %s for suffix %s", num, 'L', 1, conn.RemoteAddr(), suffix.suffix)
 		handleServerControl(num, conn, suffix)
 		return
 	}
 
 	if n < 24 {
 		if _, err := io.ReadFull(conn, b[n:]); err != nil {
-			lg.Printf("  %5d: Invalid server connection", num)
+			lg.PrintSessionf("Invalid server connection", num, ' ', 0)
 			return
 		}
 	}
 
 	if bytes.Equal(b, []byte("AZURE_CONNECT_SIGNATURE!")) {
-		lg.Printf("S %5d: Starting server data session from %s for suffix %s", num, conn.RemoteAddr(), suffix.suffix)
+		lg.PrintSessionf("Starting server data session from %s for suffix %s", num, 'S', 1, conn.RemoteAddr(), suffix.suffix)
 		handleServerData(num, conn, suffix)
 		return
 	}
 
-	lg.Printf("  %5d: Invalid server connection", num)
+	lg.PrintSessionf("Invalid server connection", num, ' ', 0)
 }
 
 // Handle azure control session.
@@ -65,7 +65,7 @@ func handleServer(num uint64, conn *tls.Conn, suffix *suffix) {
 func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 	random := make([]byte, 20)
 	if _, err := rand.Read(random); err != nil {
-		lg.Printf("L %5d: failed to generate a random")
+		lg.PrintSessionf("Failed to generate a random", num, 'L', 3)
 		return
 	}
 	// Send control pack to client
@@ -77,14 +77,14 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 		"Random":           newPackElementData(random),
 	}}
 	if _, err := p.send(conn, true); err != nil {
-		lg.Printf("L %5d: Session aborted: %s", num, err)
+		lg.PrintSessionf("Session aborted: %s", num, 'L', 3, err)
 		return
 	}
 
 	// Receive pack from client
 	p, err := recvPack(conn, true)
 	if err != nil {
-		lg.Printf("L %5d: Session aborted: %s", num, err)
+		lg.PrintSessionf("Session aborted: %s", num, 'L', 3, err)
 		return
 	}
 
@@ -95,46 +95,46 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 		var ok bool
 		hostname, ok = p.getString("CurrentHostName", true)
 		if !ok {
-			lg.Printf("L %5d: Session aborted: no hostname provided by peer", num)
+			lg.PrintSessionf("Session aborted: no hostname provided by peer", num, 'L', 3)
 			return
 		}
 		clientInfo, ok := auths.find(hostname, suffix.suffix)
 		if !ok {
-			lg.Printf("L %5d: Session aborted: hostname %s is invalid", num, hostname)
+			lg.PrintSessionf("Session aborted: hostname %s is invalid", num, 'L', 3, hostname)
 			return
 		}
 		switch clientInfo.method {
 		case authNone:
-			lg.Printf("L %5d: Authentication completed anonymously", num)
+			lg.PrintSessionf("Authentication completed anonymously", num, 'L', 2)
 		case authPassword:
 			if hash, ok := p.getData("PasswordHash"); ok && clientInfo.checkPassword(hostname, random, hash) {
-				lg.Printf("L %5d: Authentication completed with password", num)
+				lg.PrintSessionf("Authentication completed with password", num, 'L', 2)
 			} else {
-				lg.Printf("L %5d: Session aborted: incorrect password", num)
+				lg.PrintSessionf("Session aborted: incorrect password", num, 'L', 3)
 				return
 			}
 		case authCert:
 			// Peer should but didn't provide certificate during TLS handshake
-			lg.Printf("L %5d: Session aborted: authentication failed with certificate", num)
+			lg.PrintSessionf("Session aborted: authentication failed with certificate", num, 'L', 3)
 			return
 		default:
-			lg.Printf("L %5d: Session aborted: unsupported authentication method", num)
+			lg.PrintSessionf("Session aborted: unsupported authentication method", num, 'L', 3)
 			return
 		}
 	} else {
 		// Already authenticated by TLS
 		hostname = strings.ToLower(state.PeerCertificates[0].Subject.CommonName)
-		lg.Printf("L %5d: Authentication completed with certificate", num)
+		lg.PrintSessionf("Authentication completed with certificate", num, 'L', 2)
 	}
-	lg.Printf("L %5d: Authenticated as %s", num, hostname)
+	lg.PrintSessionf("Authenticated as %s", num, 'L', 2, hostname)
 
 	// Add session
 	if _, err := conn.Write([]byte{1}); err != nil {
-		lg.Printf("L %5d: Session aborted: %s", num, err)
+		lg.PrintSessionf("Session aborted: %s", num, 'L', 3, err)
 		return
 	}
 	if err := serverKeepAlive(conn); err != nil {
-		lg.Printf("L %5d: Session aborted: %s", num, err)
+		lg.PrintSessionf("Session aborted: %s", num, 'L', 3, err)
 		return
 	}
 	// non-buffered is ok but may block more often as sending signal to server takes time
@@ -149,7 +149,7 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 		select {
 		case c, ok := <-ch:
 			if !ok {
-				lg.Printf("L %5d: Session closed", num)
+				lg.PrintSessionf("Session closed", num, 'L', 3)
 				return
 			}
 			switch c.op {
@@ -175,11 +175,11 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 					_, err = p.send(conn, true)
 				}
 				if err != nil {
-					lg.Printf("L %5d: Failed to send signal to server: %s", num, err)
+					lg.PrintSessionf("Failed to send signal to server: %s", num, 'L', 2, err)
 					go sessions.delServer(num, hostname)
 					break
 				}
-				lg.Printf("L %5d: Signal sent to the server for client session %d", num, c.num)
+				lg.PrintSessionf("Signal sent to the server for client session %d", num, 'L', 2, c.num)
 			}
 		case <-ticker.C:
 			if err := serverKeepAlive(conn); err != nil {
@@ -210,19 +210,19 @@ func handleServerData(num uint64, conn *tls.Conn, suffix *suffix) {
 	// Receive pack from client
 	p, err := recvPack(conn, true)
 	if err != nil {
-		lg.Printf("S %5d: Session aborted: %s", num, err)
+		lg.PrintSessionf("Session aborted: %s", num, 'S', 3, err)
 		return
 	}
 
 	hostname, ok := p.getString("hostname", false)
 	if !ok {
-		lg.Printf("S %5d: Session aborted: no hostname provided by peer", num)
+		lg.PrintSessionf("Session aborted: no hostname provided by peer", num, 'S', 3)
 		return
 	}
 
 	sessionID, ok := p.getData("session_id")
 	if !ok || len(sessionID) != 20 {
-		lg.Printf("S %5d: Session aborted: failed to get session ID from server", num)
+		lg.PrintSessionf("Session aborted: failed to get session ID from server", num, 'S', 3)
 		return
 	}
 
@@ -230,13 +230,13 @@ func handleServerData(num uint64, conn *tls.Conn, suffix *suffix) {
 	if cnum, c := sessions.serverRespond(num, conn, hostname, sessionID); c != nil {
 		defer sessions.delRelay(cnum)
 		if _, err := conn.Write([]byte{1}); err != nil {
-			lg.Printf("S %5d: Session aborted: %s", num, err)
+			lg.PrintSessionf("Session aborted: %s", num, 'S', 3, err)
 			return
 		}
-		lg.Printf("S %5d: Relaying data from client session %d", num, cnum)
+		lg.PrintSessionf("Relaying data from client session %d", num, 'S', 2, cnum)
 		n, _ := io.CopyBuffer(conn, c, nil)
-		lg.Printf("S %5d: Server session closed: relayed %d bytes from client to server", num, n)
+		lg.PrintSessionf("Server session closed: relayed %d bytes from client to server", num, 'S', 3, n)
 	} else {
-		lg.Printf("S %5d: Session aborted: can't find the client session", num)
+		lg.PrintSessionf("Session aborted: can't find the client session", num, 'S', 3)
 	}
 }

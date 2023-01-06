@@ -16,28 +16,28 @@ type clientCommand struct {
 
 // Handle new client connection
 func handleClient(num uint64, conn *tls.Conn, hostname string, suffix *suffix) {
-	lg.Printf("C %5d: New client connection from %s for %s", num, conn.RemoteAddr(), hostname)
+	lg.PrintSessionf("New client connection from %s for %s", num, 'C', 1, conn.RemoteAddr(), hostname)
 
 	// Find server control session
 	// buffered because channel might never be read
 	ch := make(chan clientCommand, 1)
 	if err := sessions.clientRequest(num, hostname, conn, ch); err != nil {
-		lg.Printf("C %5d: Connection closed: %s", num, err)
+		lg.PrintSessionf("Connection closed: %s", num, 'C', 3, err)
 		return
 	}
-	lg.Printf("C %5d: Waiting for server to connect", num)
+	lg.PrintSessionf("Waiting for server to connect", num, 'C', 2)
 
 	// Wait for server to connect
 	timer := time.NewTimer(10 * time.Second)
 	defer timer.Stop()
 	select {
 	case s := <-ch:
-		lg.Printf("C %5d: Relaying data from server session %d", num, s.num)
+		lg.PrintSessionf("Relaying data from server session %d", num, 'C', 2, s.num)
 		n, _ := io.CopyBuffer(conn, s.conn, nil)
-		lg.Printf("C %5d: Client session closed: relayed %d bytes from server to client", num, n)
+		lg.PrintSessionf("Client session closed: relayed %d bytes from server to client", num, 'C', 3, n)
 	case <-timer.C:
 		// Timeout
-		lg.Printf("C %5d: Connection closed: server did not respond", num)
+		lg.PrintSessionf("Connection closed: server did not respond", num, 'C', 3)
 		sessions.delRequest(num)
 	}
 }

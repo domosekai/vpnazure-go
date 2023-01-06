@@ -87,13 +87,13 @@ func main() {
 			go func(num uint64) {
 				defer conn.Close()
 				if err := tlsConn.Handshake(); err != nil {
-					lg.Printf("  %5d: TLS handshake failed: %s", num, err)
+					lg.PrintSessionf("TLS handshake failed: %s", num, ' ', 0, err)
 					return
 				}
 				state := tlsConn.ConnectionState()
 				hostname, suffix, server, ok := suffixes.parse(state.ServerName)
 				if !ok {
-					lg.Printf("  %5d: SNI %s does not match any suffix", num, state.ServerName)
+					lg.PrintSessionf("SNI %s does not match any suffix", num, ' ', 0, state.ServerName)
 					return
 				}
 				if server {

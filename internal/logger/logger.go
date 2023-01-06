@@ -64,3 +64,17 @@ func (l *Logger) Println(v ...any) {
 	l.logger.Println(v...)
 	l.rw.RUnlock()
 }
+
+// Print fancier log for sessions.
+// Stage: 1 for starting, 2 for established, 3 for closing.
+func (l *Logger) PrintSessionf(format string, num uint64, sType byte, stage int, v ...any) {
+	l.rw.RLock()
+	stages := [4]string{
+		"       ",
+		" *     ",
+		"   *   ",
+		"     * ",
+	}
+	l.logger.Printf("%c %5d:"+stages[stage]+format, append([]any{sType, num}, v...)...)
+	l.rw.RUnlock()
+}
