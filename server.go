@@ -174,6 +174,10 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 				if err == nil {
 					_, err = p.send(conn, true)
 				}
+				if err == nil {
+					b := make([]byte, 1)
+					_, err = conn.Read(b)
+				}
 				if err != nil {
 					lg.PrintSessionf("Failed to send signal to server: %s", num, 'L', 2, err)
 					go sessions.delServer(num, hostname)
@@ -234,7 +238,7 @@ func handleServerData(num uint64, conn *tls.Conn, suffix *suffix) {
 			return
 		}
 		lg.PrintSessionf("Relaying data from client session %d", num, 'S', 2, cnum)
-		n, _ := io.CopyBuffer(conn, c, nil)
+		n, _ := io.Copy(conn, c)
 		lg.PrintSessionf("Server session closed: relayed %d bytes from client to server", num, 'S', 3, n)
 	} else {
 		lg.PrintSessionf("Session aborted: can't find the client session", num, 'S', 3)

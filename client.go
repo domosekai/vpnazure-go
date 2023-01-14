@@ -33,7 +33,7 @@ func handleClient(num uint64, conn *tls.Conn, hostname string, suffix *suffix) {
 	select {
 	case s := <-ch:
 		lg.PrintSessionf("Relaying data from server session %d", num, 'C', 2, s.num)
-		n, _ := io.CopyBuffer(conn, s.conn, nil)
+		n, _ := io.Copy(conn, s.conn)
 		lg.PrintSessionf("Client session closed: relayed %d bytes from server to client", num, 'C', 3, n)
 	case <-timer.C:
 		// Timeout
