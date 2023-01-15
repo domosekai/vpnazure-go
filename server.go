@@ -137,7 +137,7 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 		lg.PrintSessionf("Session aborted: %s", num, 'L', 3, err)
 		return
 	}
-	// non-buffered is ok but may block more often as sending signal to server takes time
+	// unbuffered is ok but may block as sending signal to server takes time
 	ch := make(chan serverCommand, 50)
 	// channel operations other than receiving must be done in sessions to avoid race
 	sessions.addServer(num, hostname, conn, ch)
@@ -182,13 +182,13 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 					lg.PrintSessionf("Failed to send signal to server: %s", num, 'L', 2, err)
 				}
 				if err != nil {
-					go sessions.delServer(num, hostname)
+					sessions.delServer(num, hostname)
 				}
 			}
 		case <-ticker.C:
 			if err := serverKeepAlive(conn); err != nil {
-				// launch goroutine to avoid deadlock with sending to channel
-				go sessions.delServer(num, hostname)
+				// if channel is unbuffered, launch as goroutine to avoid deadlock with sending
+				sessions.delServer(num, hostname)
 			}
 		}
 	}

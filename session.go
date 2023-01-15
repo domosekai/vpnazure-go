@@ -69,7 +69,7 @@ func (sl *sessionList) clientRequest(num uint64, hostname string, conn net.Conn,
 		return errors.New("server is offline")
 	}
 
-	// sending may block when buffer is full
+	// sending may block when buffer is full (remove if unbuffered)
 	if len(s.ch) == cap(s.ch) {
 		return errors.New("server is busy")
 	}
