@@ -175,15 +175,15 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 					_, err = p.send(conn, true)
 				}
 				if err == nil {
+					lg.PrintSessionf("Signal sent to the server for client session %d", num, 'L', 2, c.num)
 					b := make([]byte, 1)
 					_, err = conn.Read(b)
+				} else {
+					lg.PrintSessionf("Failed to send signal to server: %s", num, 'L', 2, err)
 				}
 				if err != nil {
-					lg.PrintSessionf("Failed to send signal to server: %s", num, 'L', 2, err)
 					go sessions.delServer(num, hostname)
-					break
 				}
-				lg.PrintSessionf("Signal sent to the server for client session %d", num, 'L', 2, c.num)
 			}
 		case <-ticker.C:
 			if err := serverKeepAlive(conn); err != nil {
