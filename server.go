@@ -40,7 +40,7 @@ func handleServer(num uint64, conn *tls.Conn, suffix *suffix) {
 
 	if bytes.Equal(b[:4], []byte("ACTL")) {
 		lg.PrintSessionf("Starting server control session from %s for suffix %s", num, 'L', 1, conn.RemoteAddr(), suffix.suffix)
-		handleServerControl(num, conn, suffix)
+		handleServerControl(num, conn, suffix.suffix)
 		return
 	}
 
@@ -53,7 +53,7 @@ func handleServer(num uint64, conn *tls.Conn, suffix *suffix) {
 
 	if bytes.Equal(b, []byte("AZURE_CONNECT_SIGNATURE!")) {
 		lg.PrintSessionf("Starting server data session from %s for suffix %s", num, 'S', 1, conn.RemoteAddr(), suffix.suffix)
-		handleServerData(num, conn, suffix)
+		handleServerData(num, conn)
 		return
 	}
 
@@ -62,7 +62,7 @@ func handleServer(num uint64, conn *tls.Conn, suffix *suffix) {
 
 // Handle azure control session.
 // conn automatically closes on return, do not fork.
-func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
+func handleServerControl(num uint64, conn *tls.Conn, suffix string) {
 	random := make([]byte, 20)
 	if _, err := rand.Read(random); err != nil {
 		lg.PrintSessionf("Failed to generate a random", num, 'L', 3)
@@ -98,7 +98,7 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 			lg.PrintSessionf("Session aborted: no hostname provided by peer", num, 'L', 3)
 			return
 		}
-		clientInfo, ok := auths.find(hostname, suffix.suffix)
+		clientInfo, ok := auths.find(hostname, suffix)
 		if !ok {
 			lg.PrintSessionf("Session aborted: hostname %s is invalid", num, 'L', 3, hostname)
 			return
@@ -156,32 +156,38 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix *suffix) {
 			case serverRelay:
 				// send signal to server
 				// In this implemention, relay server is the control server though they can differ
-				remoteAddr := conn.RemoteAddr().(*net.TCPAddr)
-				localAddr := conn.LocalAddr().(*net.TCPAddr)
-				p := pack{elements: map[string]packElement{
-					"opcode":        newPackElementString(string(c.op)),
-					"hostname":      newPackElementString(c.hostname),
-					"session_id":    newPackElementData(c.sessionID),
-					"client_port":   newPackElementInt(uint32(c.clientPort)),
-					"server_port":   newPackElementInt(uint32(remoteAddr.Port)),
-					"relay_address": newPackElementString(suffix.control),
-					"relay_port":    newPackElementInt(uint32(localAddr.Port)),
-					"cert_hash":     newPackElementData(suffix.certHash[:]),
-				}}
-				p.addIP("client_ip", c.clientIP)
-				p.addIP("server_ip", remoteAddr.IP)
-				_, err := conn.Write([]byte{1})
-				if err == nil {
-					_, err = p.send(conn, true)
-				}
-				if err == nil {
-					lg.PrintSessionf("Signal sent to the server for client session %d", num, 'L', 2, c.num)
-					b := make([]byte, 1)
-					_, err = conn.Read(b)
+				// Get fresh suffix because it may get changed during a control session
+				if sfx := suffixes.get(suffix); sfx != nil {
+					remoteAddr := conn.RemoteAddr().(*net.TCPAddr)
+					localAddr := conn.LocalAddr().(*net.TCPAddr)
+					p := pack{elements: map[string]packElement{
+						"opcode":        newPackElementString(string(c.op)),
+						"hostname":      newPackElementString(c.hostname),
+						"session_id":    newPackElementData(c.sessionID),
+						"client_port":   newPackElementInt(uint32(c.clientPort)),
+						"server_port":   newPackElementInt(uint32(remoteAddr.Port)),
+						"relay_address": newPackElementString(sfx.control),
+						"relay_port":    newPackElementInt(uint32(localAddr.Port)),
+						"cert_hash":     newPackElementData(sfx.certHash[:]),
+					}}
+					p.addIP("client_ip", c.clientIP)
+					p.addIP("server_ip", remoteAddr.IP)
+					_, err := conn.Write([]byte{1})
+					if err == nil {
+						_, err = p.send(conn, true)
+					}
+					if err == nil {
+						lg.PrintSessionf("Signal sent to the server for client session %d", num, 'L', 2, c.num)
+						b := make([]byte, 1)
+						_, err = conn.Read(b)
+					} else {
+						lg.PrintSessionf("Failed to send signal to server: %s", num, 'L', 2, err)
+					}
+					if err != nil {
+						sessions.delServer(num, hostname)
+					}
 				} else {
-					lg.PrintSessionf("Failed to send signal to server: %s", num, 'L', 2, err)
-				}
-				if err != nil {
+					lg.PrintSessionf("Suffix %s is no longer valid", num, 'L', 3, suffix)
 					sessions.delServer(num, hostname)
 				}
 			}
@@ -210,7 +216,7 @@ func serverKeepAlive(conn *tls.Conn) error {
 
 // Handle azure data session.
 // conn automatically closes on return, do not fork.
-func handleServerData(num uint64, conn *tls.Conn, suffix *suffix) {
+func handleServerData(num uint64, conn *tls.Conn) {
 	// Receive pack from client
 	p, err := recvPack(conn, true)
 	if err != nil {

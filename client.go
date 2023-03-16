@@ -15,7 +15,7 @@ type clientCommand struct {
 }
 
 // Handle new client connection
-func handleClient(num uint64, conn *tls.Conn, hostname string, suffix *suffix) {
+func handleClient(num uint64, conn *tls.Conn, hostname string) {
 	lg.PrintSessionf("New client connection from %s for %s", num, 'C', 1, conn.RemoteAddr(), hostname)
 
 	// Find server control session

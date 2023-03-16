@@ -99,7 +99,7 @@ func main() {
 				if server {
 					handleServer(num, tlsConn, suffix)
 				} else {
-					handleClient(num, tlsConn, hostname, suffix)
+					handleClient(num, tlsConn, hostname)
 				}
 			}(num)
 		} else {

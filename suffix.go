@@ -90,3 +90,17 @@ func (su *suffixList) parse(sni string) (hostname string, suffix *suffix, server
 
 	return "", nil, false, false
 }
+
+// Get suffix by exact suffix string
+func (su *suffixList) get(suffix string) *suffix {
+	su.rw.RLock()
+	defer su.rw.RUnlock()
+
+	for i := range su.list {
+		if su.list[i].suffix == suffix {
+			return &su.list[i]
+		}
+	}
+
+	return nil
+}
