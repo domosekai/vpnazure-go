@@ -32,6 +32,9 @@ func listenSignal() {
 			} else {
 				log.Fatalf("At least 1 server credential is needed")
 			}
+
+			// Remove outdated server control sessions
+			sessions.cleanupServers()
 		case syscall.SIGUSR2:
 			if *logFile == "" {
 				break

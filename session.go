@@ -22,9 +22,10 @@ type relayingSession struct {
 }
 
 type serverSession struct {
-	num  uint64               // server control session number
-	conn net.Conn             // server control connection
-	ch   chan<- serverCommand // channel to send server command
+	num    uint64               // server control session number
+	suffix string               // server suffix
+	conn   net.Conn             // server control connection
+	ch     chan<- serverCommand // channel to send server command
 }
 
 type sessionList struct {
@@ -35,7 +36,7 @@ type sessionList struct {
 }
 
 // Register a new server
-func (sl *sessionList) addServer(num uint64, hostname string, conn *tls.Conn, ch chan serverCommand) {
+func (sl *sessionList) addServer(num uint64, hostname string, suffix string, conn *tls.Conn, ch chan serverCommand) {
 	sl.s.Lock()
 	defer sl.s.Unlock()
 
@@ -43,7 +44,7 @@ func (sl *sessionList) addServer(num uint64, hostname string, conn *tls.Conn, ch
 	if s, ok := sl.servers[hostname]; ok {
 		close(s.ch)
 	}
-	sl.servers[hostname] = serverSession{num: num, conn: conn, ch: ch}
+	sl.servers[hostname] = serverSession{num: num, suffix: suffix, conn: conn, ch: ch}
 }
 
 // Remove a server
@@ -54,6 +55,19 @@ func (sl *sessionList) delServer(num uint64, hostname string) {
 	if s, ok := sl.servers[hostname]; ok && s.num == num {
 		delete(sl.servers, hostname)
 		close(s.ch)
+	}
+}
+
+// Remove outdated servers
+func (sl *sessionList) cleanupServers() {
+	sl.s.Lock()
+	defer sl.s.Unlock()
+
+	for hostname, s := range sl.servers {
+		if _, ok := auths.find(hostname, s.suffix); !ok {
+			delete(sl.servers, hostname)
+			close(s.ch)
+		}
 	}
 }
 

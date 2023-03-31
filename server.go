@@ -140,7 +140,7 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix string) {
 	// unbuffered is ok but may block as sending signal to server takes time
 	ch := make(chan serverCommand, 50)
 	// channel operations other than receiving must be done in sessions to avoid race
-	sessions.addServer(num, hostname, conn, ch)
+	sessions.addServer(num, hostname, suffix, conn, ch)
 
 	// Session starts
 	ticker := time.NewTicker(30 * time.Second)
