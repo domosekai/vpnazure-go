@@ -34,6 +34,14 @@ Privately hosted VPN Azure solution for SoftEther VPN
   
     All control and data sessions speak standard TLS.
     
+  - Flexibility
+  
+    Handle configuration changes on the fly. Send program a SIGHUP signal to reload all config files.
+    
+    Perfect for altering authentication info or updating server certificates, without interrupting VPN sessions.
+    
+    Not available on Windows.
+    
 ## Usage
 
   ```
