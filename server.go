@@ -16,7 +16,8 @@ import (
 type serverOperation string
 
 const (
-	serverRelay serverOperation = "relay"
+	serverRelay   serverOperation = "relay"
+	serverTimeout                 = 30 * time.Second
 )
 
 type serverCommand struct {
@@ -31,6 +32,7 @@ type serverCommand struct {
 // Handle new server connection
 func handleServer(num uint64, conn *tls.Conn, suffix *suffix) {
 	lg.PrintSessionf("New server connection from %s", num, ' ', 0, conn.RemoteAddr())
+	conn.SetDeadline(time.Now().Add(serverTimeout))
 	b := make([]byte, 24)
 	n, err := io.ReadAtLeast(conn, b, 4)
 	if err != nil {
@@ -155,6 +157,7 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix string) {
 			switch c.op {
 			case serverRelay:
 				// send signal to server
+				conn.SetDeadline(time.Now().Add(serverTimeout))
 				// In this implemention, relay server is the control server though they can differ
 				// Get fresh suffix because it may get changed during a control session
 				if sfx := suffixes.get(suffix); sfx != nil {
@@ -192,6 +195,7 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix string) {
 				}
 			}
 		case <-ticker.C:
+			conn.SetDeadline(time.Now().Add(serverTimeout))
 			if err := serverKeepAlive(conn); err != nil {
 				// if channel is unbuffered, launch as goroutine to avoid deadlock with sending
 				sessions.delServer(num, hostname)
@@ -244,6 +248,7 @@ func handleServerData(num uint64, conn *tls.Conn) {
 			return
 		}
 		lg.PrintSessionf("Relaying data from client session %d", num, 'S', 2, cnum)
+		conn.SetDeadline(time.Time{})
 		n, _ := io.Copy(conn, c)
 		lg.PrintSessionf("Server session closed: relayed %d bytes from client to server", num, 'S', 3, n)
 	} else {
