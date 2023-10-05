@@ -6,9 +6,13 @@ Privately hosted VPN Azure solution for SoftEther VPN
   VPN Azure is a VPN relay service provided by SoftEther Corporation for free to users of SoftEther VPN.
   It saves the need for VPN servers to sit on public IP addresses.
   
-  This is a open-sourced implementation of the VPN Azure function in Go.
+  This is an open-sourced implementation of the VPN Azure function in Go that works with custom domain names.
   
   It's NOT an official product of SoftEther Corporation.
+
+  The support for custom VPN Azure service has not been incorporated to SoftEther VPN.
+  See https://github.com/SoftEtherVPN/SoftEtherVPN/pull/1739.
+  You can try the feature with our fork at https://github.com/domosekai/SoftEtherVPN.
   
 ## Feature
 
