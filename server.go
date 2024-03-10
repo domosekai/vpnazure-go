@@ -128,7 +128,6 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix string) {
 		hostname = strings.ToLower(state.PeerCertificates[0].Subject.CommonName)
 		lg.PrintSessionf("Authentication completed with certificate", num, 'L', 2)
 	}
-	lg.PrintSessionf("Authenticated as %s", num, 'L', 2, hostname)
 
 	// Add session
 	if _, err := conn.Write([]byte{1}); err != nil {
@@ -143,6 +142,7 @@ func handleServerControl(num uint64, conn *tls.Conn, suffix string) {
 	ch := make(chan serverCommand, 50)
 	// channel operations other than receiving must be done in sessions to avoid race
 	sessions.addServer(num, hostname, suffix, conn, ch)
+	lg.PrintSessionf("%s is online", num, 'L', 2, hostname)
 
 	// Session starts
 	ticker := time.NewTicker(30 * time.Second)
