@@ -8,4 +8,3 @@
 // Lines start with / or # are ignored.
 
 //.myazure.net	cloud.myazure.net	fullchain.pem	privkey.pem			// This line defines suffix ".myazure.net". Its control server is at cloud.myazure.net.
-//.yourazure.net	cloud.myazure.net	fullchain.pem	privkey.pem		// This line defines suffix ".yourazure.net". It has the same control server as ".myazure.net".
