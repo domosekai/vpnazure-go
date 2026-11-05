@@ -25,6 +25,10 @@ const (
 
 const (
 	maxPackSize = 10 * 1024
+
+	// A serialized value occupies at least 4 bytes, so an element in a
+	// maximum-sized pack can never legitimately hold more values than this
+	maxPackValues = maxPackSize / 4
 )
 
 type packElement struct {
@@ -83,11 +87,14 @@ func (p *pack) unmarshal(data []byte) bool {
 			return false
 		}
 		name := strings.ToLower(string(b))
-		if !cb.ReadUint32(&n) {
+		// Reject unknown value types and oversized value counts upfront:
+		// otherwise a crafted pack could spin the loop below for up to 2^32
+		// empty iterations (pre-authentication CPU exhaustion)
+		if !cb.ReadUint32(&n) || valueType(n) > valueInt64 {
 			return false
 		}
 		element := packElement{valType: valueType(n)}
-		if !cb.ReadUint32(&n) {
+		if !cb.ReadUint32(&n) || n > maxPackValues {
 			return false
 		}
 		for j := 0; j < int(n); j++ {
@@ -106,7 +113,7 @@ func (p *pack) unmarshal(data []byte) bool {
 				element.values = append(element.values, v)
 			case valueData:
 				var n uint32
-				if !cb.ReadUint32(&n) {
+				if !cb.ReadUint32(&n) || n > maxPackSize {
 					return false
 				}
 				var v []byte
@@ -116,7 +123,7 @@ func (p *pack) unmarshal(data []byte) bool {
 				element.values = append(element.values, v)
 			case valueString, valueUniString:
 				var n uint32
-				if !cb.ReadUint32(&n) {
+				if !cb.ReadUint32(&n) || n > maxPackSize {
 					return false
 				}
 				var v []byte
@@ -124,6 +131,8 @@ func (p *pack) unmarshal(data []byte) bool {
 					return false
 				}
 				element.values = append(element.values, string(v))
+			default:
+				return false
 			}
 		}
 		p.elements[name] = element
